@@ -1,0 +1,31 @@
+{
+  "extends": "tslint:recommended",
+  "rules": {
+    "max-line-length": {
+      "options": [120]
+    },
+    "member-access": [false],
+    "quotemark": [true, "single"],
+    "object-literal-sort-keys": false,
+    "ordered-imports": false,
+    "no-console": false,
+    "variable-name": false,
+    "arrow-parens": false,
+    "new-parens": true,
+    "no-arg": true,
+    "no-bitwise": false,
+    "no-conditional-assignment": true,
+    "no-consecutive-blank-lines": false,
+    "interface-name": false,
+    "no-namespace": false,
+    "no-empty": false,
+    "curly": false,
+    "radix": false,
+    "forin": false
+  },
+  "jsRules": {
+    "max-line-length": {
+      "options": [120]
+    }
+  }
+}

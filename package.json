@@ -1,0 +1,30 @@
+{
+  "name": "socket.io-stream-ts",
+  "version": "0.0.0",
+  "description": "stream with socket.io",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digdas/socket.io-stream-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/digdas/socket.io-stream-ts/issues"
+  },
+  "keywords": [
+    "streamio",
+    "socket.io-stream",
+    "socket.io-stream-ts",
+    "stream in socket.io"
+  ],
+  "author": "Gentelmens from The Harvard on The Bottle INC",
+  "license": "MIT",
+  "homepage": "https://github.com/digdas/socket.io-stream-ts#readme",
+  "devDependencies": {
+    "@types/socket.io": "^2.1.2",
+    "tslint": "^5.13.1",
+    "typescript": "^3.3.3333"
+  }
+}
