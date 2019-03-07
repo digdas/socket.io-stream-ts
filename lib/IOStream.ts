@@ -1,13 +1,7 @@
-import {Duplex, DuplexOptions} from "stream";
-import {IIOStream, IStreamSocket} from "./interfaces";
-
-/**
- * Class for check by instanceof in decoder & encoder
- */
-export abstract class IOStreamCheckAble extends Duplex implements IIOStream {
-  Id: string;
-  Options: DuplexOptions;
-}
+import {DuplexOptions} from 'stream';
+import {IStreamSocket, IStreamSocketReadChunkData, IStreamSocketWriteChunkData} from './interfaces';
+import {IOStreamCheckAble} from './types/IOStreamCheckAble';
+import {StreamEvent} from './enums';
 
 /**
  * Extended Duplex stream to emulate Stream API through socket.io
@@ -16,8 +10,8 @@ export class IOStream extends IOStreamCheckAble {
   private readonly _id: string;
   private readonly _options: DuplexOptions;
   private _socket: IStreamSocket;
-  private _readBuffer: any[] = [];
-  private _writeBuffer: any[] = [];
+  private _readBuffer: IStreamSocketReadChunkData[] = [];
+  private _writeBuffer: IStreamSocketWriteChunkData[] = [];
   private _readable: boolean;
   private _writable: boolean;
   private _destroyed: boolean;
@@ -25,6 +19,8 @@ export class IOStream extends IOStreamCheckAble {
   constructor(opt?: DuplexOptions) {
     super(opt);
     this._options = opt || {};
+
+    this._initEvents();
   }
 
   /**
@@ -34,75 +30,53 @@ export class IOStream extends IOStreamCheckAble {
     if (this._destroyed) return;
 
     this._readable = this._writable = false;
-    if (this._socket) {
-      this._socket.cleanup(this._id);
-      this._socket = null;
-    }
+    this._destroyed = true;
   }
 
   /**
-   * Read from socket
+   * Duplex.Readable _read method override
    * @param size
    * @private
    */
   private _read(size: number): void {
-    let push: any[];
-
     if (this._destroyed) return;
 
+    let pushData: IStreamSocketReadChunkData;
     if (this._readBuffer.length) {
-      // flush buffer and end if it exists.
-      while (push = this._readBuffer.shift()) {
-        if (!this._push()) break;
-      }
+      do {
+        pushData = this._readBuffer.shift();
+        if (!this._push(pushData.chunk, pushData.encoding, pushData.writeCallback)) {
+          break;
+        }
+      } while (pushData);
       return;
     }
 
-    // Now we ready to read data from remote stream
     this._readable = true;
-    this._socket.read(this._id, size);
-  }
-
-
-  /**
-   * Push data from remotely stream to local
-   * @private
-   */
-  private _push(): boolean;
-  private _push(chunk?: any[], encoding?: BufferEncoding, callback?: () => void): boolean {
-    this._readable = false;
-    const success: boolean = super.push(chunk || '', encoding);
-    callback();
-    return success;
   }
 
   /**
-   * Read from remote stream
-   * @param size
-   * @private
-   */
-  private _onRead(size: number): void {
-    let write: any[] = this._writeBuffer.shift();
-    if (write) return this.write();
-
-    this._writable = true;
-  }
-
-  /**
-   * Write local data to remote stream
+   * Write the data fetched remotely
+   * so that we can now read locally
    * @param chunk
    * @param encoding
    * @param callback
    * @private
    */
-  private _write(chunk: any[], encoding: BufferEncoding, callback: () => void) {
-
+  private _push(chunk: Buffer | string, encoding: BufferEncoding, callback: (...args: any[]) => void): boolean {
+    this._readable = false;
+    const ret: boolean = super.push(chunk, encoding);
+    callback();
+    return ret;
   }
 
-  private _writeToSocket(id: string, chunk: any[], encoding: BufferEncoding, callback: () => void): void {
-    if (this._destroyed) return;
-
-    this.writable = false;
-    this._socket.write(id, chunk, encoding, callback);
+  /**
+   * Init local events
+   * @private
+   */
+  private _initEvents(): void {
+    this.on(StreamEvent.Finish, this._onFinish.bind(this));
+    this.on(StreamEvent.End, this._onEnd.bind(this));
+    this.on(StreamEvent.Error, this._onError.bind(this));
   }
 }

@@ -1,8 +1,7 @@
 import {EventEmitter} from 'events';
-import {IDecoder, IEncoder, IIOStream, IStreamSocket, IStreamSocketOptions} from './interfaces';
+import {IDecoder, IEncoder, IIOStream, IStreamSocket, IStreamSocketWriteChunkData, IStreamSocketOptions} from './interfaces';
 import {Socket} from 'socket.io';
-import {StreamSocketEvent} from './enums/StreamSocketEvent';
-import {SocketEvent} from './enums/SocketEvent';
+import {SocketEvent, StreamEvent, StreamSocketEvent} from './enums';
 
 export default class StreamSocket extends EventEmitter implements IStreamSocket {
   private _socket: Socket;
@@ -109,7 +108,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
    */
   private _write(
     id: string,
-    chunk: Buffer | string,
+    chunk: ArrayBuffer | Buffer | string,
     encoding: BufferEncoding,
     callback: (...args: any[]) => any,
   ): void {
@@ -150,9 +149,121 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
   private _onRead(id: string, size: number): void {
     const stream: IIOStream = this._streams[id];
     if (!stream) return;
+
+    const chunk: IStreamSocketWriteChunkData = stream.read(size);
+    if (!chunk) return;
+
+    this._write(id, chunk.chunk, chunk.encoding, chunk.writeCallback);
   }
 
+  /**
+   * Handler for write request
+   * @param id
+   * @param chunk
+   * @param encoding
+   * @param callback
+   * @private
+   */
+  private _onWrite(
+    id: string,
+    chunk: ArrayBuffer | Buffer | string,
+    encoding: BufferEncoding,
+    callback: (...args: any[]) => any,
+  ): void {
+    const stream: IIOStream = this._streams[id];
+    if (!stream) return;
 
+    let buffChunk: Buffer;
+    // convert chunk to buffer if it not
+    if (chunk instanceof ArrayBuffer) {
+      buffChunk = Buffer.from(new Uint8Array(chunk));
+    } else if (!Buffer.isBuffer(chunk) && typeof chunk === 'string') {
+      buffChunk = Buffer.from(chunk, encoding);
+    } else {
+      buffChunk = chunk;
+    }
+    stream.write(buffChunk, encoding, callback);
+  }
+
+  /**
+   * Handler for stream end request
+   * @param id
+   * @private
+   */
+  private _onEnd(id: string): void {
+    const stream: IIOStream = this._streams[id];
+    if (!stream) return;
+
+    stream.end();
+  }
+
+  /**
+   * Handler for stream error request
+   * @param id
+   * @param message
+   * @private
+   */
+  private _onError(id: string, message?: string): void {
+    const stream: IIOStream = this._streams[id];
+    if (!stream) return;
+
+    const error = new Error(message);
+    // TODO: add extended error
+    error['remote'] = true;
+    stream.emit(StreamEvent.Error, error);
+  }
+
+  /**
+   * Socket disconnect handler
+   * @private
+   */
+  private _onDisconnect(): void {
+    for (const id in this._streams) {
+      const stream: IIOStream = this._streams[id];
+      stream.destroy();
+      stream.emit(StreamEvent.Close);
+      stream.emit(StreamEvent.Error, new Error('socket disconnected'));
+      this._cleanup(id);
+    }
+  }
+
+  /**
+   * on args stream encoded handler
+   * @param stream
+   * @private
+   */
+  private _onEncode(stream: IIOStream): void {
+    if (stream.Destroyed) {
+      throw new Error('stream already destroyed');
+    }
+    if (this._streams[stream.Id]) {
+      throw new Error(`stream with id ${stream.Id} already exits`);
+    }
+
+    this._streams[stream.Id] = stream;
+  }
+
+  /**
+   * emit args stream decoded handler
+   * @param stream
+   * @private
+   */
+  private _onDecode(stream: IIOStream): void {
+    if (this._streams[stream.Id]) {
+      throw new Error(`stream with id ${stream.Id} already exits`);
+    }
+
+    
+    this._streams[stream.Id] = stream;
+  }
+
+  /**
+   * Remove stream
+   * @param id
+   */
+  private _cleanup(id: string): void {
+    delete this._streams[id];
+  }
 
   /**
    * Initialize private events
