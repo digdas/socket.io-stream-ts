@@ -10,9 +10,9 @@ export class Decoder extends EventEmitter implements IDecoder {
   decode(data: IPlaceHolderObject | IPlaceHolderObject[]): IIOStream | any[] | object {
     if (data instanceof Array) {
       return this.decodeArray(data);
-    } else if (data && data.$stream) {
+    } else if (data && data.streamId) {
       return this.decodeStream(data);
-    } else if (typeof data === 'object') {
+    } else if (data && typeof data === 'object') {
       return this.decodeObject(data);
     }
     return data;
@@ -37,8 +37,7 @@ export class Decoder extends EventEmitter implements IDecoder {
   }
 
   decodeStream(encodedStream: IPlaceHolderObject): IIOStream {
-    const decodedStream: IIOStream = new IOStream(encodedStream.streamOptions);
-    decodedStream.Id = encodedStream.streamId;
+    const decodedStream: IIOStream = new IOStream(encodedStream.streamOptions, encodedStream.streamId);
     this.emit('stream', decodedStream);
     return decodedStream;
   }

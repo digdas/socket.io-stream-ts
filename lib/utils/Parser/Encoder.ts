@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 import {IEncoder, IIOStream, IPlaceHolderObject} from '../../interfaces';
-import {IOStreamCheckAble} from '../../IOStream';
+import {IOStreamCheckAble} from '../../types/IOStreamCheckAble';
 
 /**
  * Encode to place holder object
@@ -12,7 +12,7 @@ export class Encoder extends EventEmitter implements IEncoder {
       return this.encodeStream(data);
     } else if (data instanceof Array) {
       return this.encodeArray(data);
-    } else if (typeof data === 'object') {
+    } else if (data && typeof data === 'object') {
       return this.encodeObject(data);
     }
     return data;

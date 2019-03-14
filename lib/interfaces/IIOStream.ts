@@ -7,8 +7,9 @@ export interface IIOStream {
   Options: DuplexOptions;
   Destroyed: boolean;
   destroy(): void;
-  read(size: number): IStreamSocketWriteChunkData;
+  readLocal(size: number): IStreamSocketWriteChunkData;
   write(chunk: Buffer, encoding: BufferEncoding, callback: (...args: any) => void);
-  end(): void;
+  remoteEnd(): void;
   emit(event: StreamEvent, data?: any): void;
+  on(event: StreamEvent, callback: (...args: any[]) => void): void;
 }

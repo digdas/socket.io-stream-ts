@@ -1,11 +1,18 @@
 import {EventEmitter} from 'events';
-import {IDecoder, IEncoder, IIOStream, IStreamSocket, IStreamSocketWriteChunkData, IStreamSocketOptions} from './interfaces';
+import {
+  IDecoder,
+  IEncoder,
+  IIOStream,
+  IStreamSocket,
+  IStreamSocketOptions,
+  IStreamSocketWriteChunkData,
+} from './interfaces';
 import {Socket} from 'socket.io';
 import {SocketEvent, StreamEvent, StreamSocketEvent} from './enums';
 
 export default class StreamSocket extends EventEmitter implements IStreamSocket {
   private _socket: Socket;
-  private _streams: {[key: string]: IIOStream};
+  private readonly _streams: {[key: string]: IIOStream};
   private readonly _forceBase64: boolean;
   private readonly _encoder: IEncoder;
   private readonly _decoder: IDecoder;
@@ -89,7 +96,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
   }
 
   /**
-   * Notifies server/client the read event
+   * Notifies server/client the readLocal event
    * @param id
    * @param size
    * @private
@@ -122,11 +129,11 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
   }
 
   /**
-   * Request about stream end
+   * Request about stream remoteEnd
    * @param id
    * @private
    */
-  private _end(id: number): void {
+  private _end(id: string): void {
     this._socket.emit(StreamSocketEvent.End, id);
   }
 
@@ -141,7 +148,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
   }
 
   /**
-   * Handler for read request
+   * Handler for readLocal request
    * @param id
    * @param size
    * @private
@@ -150,7 +157,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
     const stream: IIOStream = this._streams[id];
     if (!stream) return;
 
-    const chunk: IStreamSocketWriteChunkData = stream.read(size);
+    const chunk: IStreamSocketWriteChunkData = stream.readLocal(size);
     if (!chunk) return;
 
     this._write(id, chunk.chunk, chunk.encoding, chunk.writeCallback);
@@ -186,7 +193,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
   }
 
   /**
-   * Handler for stream end request
+   * Handler for stream remoteEnd request
    * @param id
    * @private
    */
@@ -194,7 +201,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
     const stream: IIOStream = this._streams[id];
     if (!stream) return;
 
-    stream.end();
+    stream.remoteEnd();
   }
 
   /**
@@ -240,6 +247,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
       throw new Error(`stream with id ${stream.Id} already exits`);
     }
 
+    this._initStreamEvents(stream);
     this._streams[stream.Id] = stream;
   }
 
@@ -253,7 +261,7 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
       throw new Error(`stream with id ${stream.Id} already exits`);
     }
 
-    
+    this._initStreamEvents(stream);
     this._streams[stream.Id] = stream;
   }
 
@@ -263,6 +271,29 @@ export default class StreamSocket extends EventEmitter implements IStreamSocket 
    */
   private _cleanup(id: string): void {
     delete this._streams[id];
+  }
+
+  /**
+   * Set listeners on new added stream
+   * @param stream
+   * @private
+   */
+  private _initStreamEvents(stream: IIOStream): void {
+    stream.on(StreamEvent.RemoteWrite, (data: IStreamSocketWriteChunkData) => {
+      this._write(stream.Id, data.chunk, data.encoding, data.writeCallback);
+    });
+
+    stream.on(StreamEvent.RemoteRead, (size: number) => {
+      this._read(stream.Id, size);
+    });
+
+    stream.on(StreamEvent.RemoteEnd, () => {
+      this._end(stream.Id);
+    });
+
+    stream.on(StreamEvent.LocalError, (err: any) => {
+      this._error(stream.Id, err);
+    });
   }
 
   /**

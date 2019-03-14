@@ -69,18 +69,18 @@ IOStream.prototype.destroy = function() {
 };
 
 /**
- * Local read
+ * Local readLocal
  *
  * @api private
  */
 IOStream.prototype._read = function(size) {
   var push;
 
-  // We can not read from the socket if it's destroyed obviously ...
+  // We can not readLocal from the socket if it's destroyed obviously ...
   if (this.destroyed) return;
 
   if (this.pushBuffer.length) {
-    // flush buffer and end if it exists.
+    // flush buffer and remoteEnd if it exists.
     while (push = this.pushBuffer.shift()) {
       if (!push()) break;
     }
@@ -137,7 +137,7 @@ IOStream.prototype._write = function(chunk, encoding, callback) {
 
 /**
  * Write the data fetched remotely
- * so that we can now read locally
+ * so that we can now readLocal locally
  *
  * @api private
  */
@@ -159,13 +159,13 @@ IOStream.prototype._onwrite = function(chunk, encoding, callback) {
 };
 
 /**
- * When ending send 'end' event to remote stream
+ * When ending send 'remoteEnd' event to remote stream
  *
  * @api private
  */
 IOStream.prototype._end = function() {
   if (this.pushBuffer.length) {
-    // end after flushing buffer.
+    // remoteEnd after flushing buffer.
     this.pushBuffer.push(bind(this, '_done'));
   } else {
     this._done();
@@ -180,12 +180,12 @@ IOStream.prototype._end = function() {
 IOStream.prototype._done = function() {
   this._readable = false;
 
-  // signal the end of the data.
+  // signal the remoteEnd of the data.
   return this.push(null);
 };
 
 /**
- * the user has called .end(), and all the bytes have been
+ * the user has called .remoteEnd(), and all the bytes have been
  * sent out to the other side.
  * If allowHalfOpen is false, or if the readable side has
  * ended already, then destroy.
@@ -197,7 +197,7 @@ IOStream.prototype._done = function() {
 IOStream.prototype._onfinish = function() {
   debug('_onfinish');
   // Local socket just finished
-  // send 'end' event to remote
+  // send 'remoteEnd' event to remote
   if (this.socket) {
     this.socket._end(this.id);
   }
@@ -217,7 +217,7 @@ IOStream.prototype._onfinish = function() {
 
     // just in case we're waiting for an EOF.
     if (this.readable && !this._readableState.endEmitted) {
-      this.read(0);
+      this.readLocal(0);
     }
   }
 };
@@ -242,7 +242,7 @@ IOStream.prototype._onend = function() {
   debug('_onend: not finished');
 
   if (!this.allowHalfOpen) {
-    this.end();
+    this.remoteEnd();
   }
 };
 

@@ -49,9 +49,9 @@ function Socket(sio, options) {
 
   var eventName = exports.event;
   sio.on(eventName, bind(this, emit));
-  sio.on(eventName + '-read', bind(this, '_onread'));
+  sio.on(eventName + '-readLocal', bind(this, '_onread'));
   sio.on(eventName + '-write', bind(this, '_onwrite'));
-  sio.on(eventName + '-end', bind(this, '_onend'));
+  sio.on(eventName + '-remoteEnd', bind(this, '_onend'));
   sio.on(eventName + '-error', bind(this, '_onerror'));
   sio.on('error', bind(this, emit, 'error'));
   sio.on('disconnect', bind(this, '_ondisconnect'));
@@ -116,12 +116,12 @@ Socket.prototype._stream = function(type) {
 };
 
 /**
- * Notifies the read event.
+ * Notifies the readLocal event.
  *
  * @api private
  */
 Socket.prototype._read = function(id, size) {
-  this.sio.emit(exports.event + '-read', id, size);
+  this.sio.emit(exports.event + '-readLocal', id, size);
 };
 
 /**
@@ -147,7 +147,7 @@ Socket.prototype._write = function(id, chunk, encoding, callback) {
 };
 
 Socket.prototype._end = function(id) {
-  this.sio.emit(exports.event + '-end', id);
+  this.sio.emit(exports.event + '-remoteEnd', id);
 };
 
 Socket.prototype._error = function(id, err) {
@@ -191,7 +191,7 @@ Socket.prototype._onstream = function(type, listener) {
 };
 
 Socket.prototype._onread = function(id, size) {
-  debug('read: "%s"', id);
+  debug('readLocal: "%s"', id);
 
   var stream = this.streams[id];
   if (stream) {
@@ -218,7 +218,7 @@ Socket.prototype._onwrite = function(id, chunk, encoding, callback) {
 };
 
 Socket.prototype._onend = function(id) {
-  debug('end: "%s"', id);
+  debug('remoteEnd: "%s"', id);
 
   var stream = this.streams[id];
   if (!stream) {

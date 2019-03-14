@@ -4,4 +4,8 @@ export enum StreamEvent {
   Finish = 'finish',
   End = 'end',
   RemoteRead = 'remote_read',
+  RemoteWrite = 'remote_write',
+  RemoteReadEnd = 'remote_read_end',
+  RemoteEnd = 'remote_end',
+  LocalError = 'local_error',
 }
